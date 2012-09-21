@@ -15,7 +15,7 @@ function top_info()
 		"website"		=> "http://mybbdemo.tk/",
 		"author"		=> "Jones",
 		"authorsite"	=> "http://mybbdemo.tk",
-		"version"		=> "1.2",
+		"version"		=> "1.3",
 		"guid" 			=> "",
 		"compatibility" => "*"
 	);
@@ -45,11 +45,22 @@ function top_activate()
     $db->insert_query("settings", $setting);
 
     $setting = array(
+        "name" => "top_teamleader",
+        "title" => "Sollen Gruppen, die der Benutzer leitet, seperat angezeigt werden?
+Zeigt auch Gruppen, die nicht zum Team gehören an (Überschreibt vorige Einstellung)",
+        "optionscode" => "yesno",
+        "value" => "no",
+        "disporder" => "2",
+        "gid" => intval($gid),
+        );
+    $db->insert_query("settings", $setting);
+
+    $setting = array(
         "name" => "top_postbit",
         "title" => "Sollen die Gruppen auch im Postbit gezeigt werden?",
         "optionscode" => "yesno",
         "value" => "yes",
-        "disporder" => "2",
+        "disporder" => "3",
         "gid" => intval($gid),
         );
     $db->insert_query("settings", $setting);
@@ -59,13 +70,14 @@ function top_activate()
         "title" => "Welche Gruppen sollen nicht angezeigt werden? (ID, mit Komma getrennt)",
         "optionscode" => "text",
         "value" => "1, 2",
-        "disporder" => "3",
+        "disporder" => "4",
         "gid" => intval($gid),
         );
     $db->insert_query("settings", $setting);
     rebuild_settings();
 
     $template="
+{\$leader}
 <tr>
 	<td class=\"trow1\"><strong>{\$lang->top_status}:</strong></td>
 	<td class=\"trow1\">{\$status}</td>
@@ -76,6 +88,18 @@ function top_activate()
 </tr>";
     $templatearray = array(
             "title" => "member_profile_top",
+            "template" => $template,
+            "sid" => "-2",
+            );
+    $db->insert_query("templates", $templatearray);
+
+    $template="
+<tr>
+	<td class=\"trow1\"><strong>{\$lang->top_groupsleader}:</strong></td>
+	<td class=\"trow1\">{\$leaders}</td>
+</tr>";
+    $templatearray = array(
+            "title" => "member_profile_topl",
             "template" => $template,
             "sid" => "-2",
             );
@@ -117,6 +141,7 @@ function top_deactivate()
     rebuild_settings();
 
     $db->delete_query("templates", "title='member_profile_top'");
+    $db->delete_query("templates", "title='member_profile_topl'");
     $db->delete_query("templates", "title='postbit_top'");
 	require MYBB_ROOT."inc/adminfunctions_templates.php";
 	find_replace_templatesets("member_profile", "#".preg_quote('{$top}')."#i", "", 0);
@@ -132,12 +157,8 @@ function top_postbit($post)
 	
 	if(!$mybb->settings['top_postbit'])
 	    return $post;
-	
-    if($post['additionalgroups'] != "")
-		$groups = explode(",", $post['additionalgroups']);
-	$groups[] = $post['usergroup'];
 
-	$show = top_create($groups);
+	$show = top_create($post);
 
 	if(is_array($show)) {
 		foreach($show as $group) {
@@ -152,17 +173,11 @@ function top_postbit($post)
 
 function top_profile()
 {
-	global $memprofile, $templates, $top, $lang;
+	global $memprofile, $templates, $top, $lang, $mybb;
 
 	$lang->load("top");
 
-	if($memprofile['additionalgroups'] != "")
-		$groups = explode(",", $memprofile['additionalgroups']);
-	else
-		$groups = array();
-	$prim = $memprofile['usergroup'];
-
-	$show = top_create($groups, $prim);
+	$show = top_create($memprofile, false);
 
 	if(is_array($show['sec']))
 	    $teams = implode(", ", $show['sec']);
@@ -170,30 +185,64 @@ function top_profile()
 		$teams = "-";
 
 	$status = $show['primar'];
+	
+	if($mybb->settings['top_teamleader'] && is_array($show['leader'])) {
+		$leaders = implode(", ", $show['leader']);
+    	eval("\$leader = \"".$templates->get("member_profile_topl")."\";");
+	}
 
     eval("\$top = \"".$templates->get("member_profile_top")."\";");
 }
 
-function top_create($groups, $primar=false)
+function top_create($user, $one=true)
 {
-	global $groupscache, $mybb;
+	global $groupscache, $mybb, $db;
 	
+
+	if($user['additionalgroups'] != "")
+		$groups = explode(",", $user['additionalgroups']);
+	else
+		$groups = array();
+	$primar = $user['usergroup'];
+
 	$groups = array_filter($groups, "top_filter");
 
+	if(!$one && $mybb->settings['top_teamleader']) {
+		$query = $db->simple_select("groupleaders", "gid", "uid='{$user['uid']}'");
+		while($leader = $db->fetch_array($query)) {
+			if(top_filter($leader['gid']))
+				$team['leader'][] = $leader['gid'];
+		}
+	}
+	if(!$team['leader'])
+		$team['leader'] = array();
+
 	foreach($groups as $group) {
+		if(in_array($group, $team['leader']))
+		    continue;
 		$group = $groupscache[$group];
 		if(($group['showforumteam'] == "1" && $mybb->settings['top_team']) || !$mybb->settings['top_team']) {
 			$string = str_replace("{username}", $group['title'], $group['namestyle']);
-		    $showteam['sec'][] = $string;
+		    $team['sec'][] = $string;
 		}
 	}
-	if($primar) {
-		$group = $groupscache[$primar];
-		$showteam['primar'] = str_replace("{username}", $group['title'], $group['namestyle']);
-	} else
-		$showteam = $showteam['sec'];
+	$group = $groupscache[$primar];
+	$team['primar'] = str_replace("{username}", $group['title'], $group['namestyle']);
 
-	return $showteam;
+	if($one) {
+		if(!is_array($team['sec']))
+		    $team = array($team['primar']);
+		else
+		    $team = array_merge(array($team['primar']), $team['sec']);
+	} else {
+		foreach($team['leader'] as $leader) {
+			$group = $groupscache[$leader];
+			$team['leader1'][] = str_replace("{username}", $group['title'], $group['namestyle']);			
+		}
+		$team['leader'] = $team['leader1'];
+		unset($team['leader1']);
+	}
+	return $team;
 }
 
 function top_filter($var)
