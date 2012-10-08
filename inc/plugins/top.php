@@ -12,9 +12,9 @@ function top_info()
 	return array(
 		"name"			=> "Team on Profile",
 		"description"	=> "Zeigt Benutzergruppen im Profil und Postbit",
-		"website"		=> "http://mybbdemo.tk/",
+		"website"		=> "http://jonesboard.tk/",
 		"author"		=> "Jones",
-		"authorsite"	=> "http://mybbdemo.tk",
+		"authorsite"	=> "http://jonesboard.tk/",
 		"version"		=> "1.3",
 		"guid" 			=> "",
 		"compatibility" => "*"
