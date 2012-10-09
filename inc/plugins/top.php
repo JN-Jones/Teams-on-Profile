@@ -40,7 +40,7 @@ function top_activate()
         "optionscode" => "yesno",
         "value" => "no",
         "disporder" => "1",
-        "gid" => intval($gid),
+        "gid" => (int)$gid,
         );
     $db->insert_query("settings", $setting);
 
@@ -51,7 +51,7 @@ Zeigt auch Gruppen, die nicht zum Team gehören an (Überschreibt vorige Einstel
         "optionscode" => "yesno",
         "value" => "no",
         "disporder" => "2",
-        "gid" => intval($gid),
+        "gid" => (int)$gid,
         );
     $db->insert_query("settings", $setting);
 
@@ -61,7 +61,7 @@ Zeigt auch Gruppen, die nicht zum Team gehören an (Überschreibt vorige Einstel
         "optionscode" => "yesno",
         "value" => "yes",
         "disporder" => "3",
-        "gid" => intval($gid),
+        "gid" => (int)$gid,
         );
     $db->insert_query("settings", $setting);
 
@@ -71,7 +71,7 @@ Zeigt auch Gruppen, die nicht zum Team gehören an (Überschreibt vorige Einstel
         "optionscode" => "text",
         "value" => "1, 2",
         "disporder" => "4",
-        "gid" => intval($gid),
+        "gid" => (int)$gid,
         );
     $db->insert_query("settings", $setting);
     rebuild_settings();
