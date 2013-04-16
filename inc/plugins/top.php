@@ -12,12 +12,13 @@ function top_info()
 	return array(
 		"name"			=> "Team on Profile",
 		"description"	=> "Zeigt Benutzergruppen im Profil und Postbit",
-		"website"		=> "http://jonesboard.tk/",
+		"website"		=> "http://jonesboard.de/",
 		"author"		=> "Jones",
-		"authorsite"	=> "http://jonesboard.tk/",
+		"authorsite"	=> "http://jonesboard.de/",
 		"version"		=> "1.3",
 		"guid" 			=> "",
-		"compatibility" => "*"
+		"compatibility" => "*",
+		"myplugins_id"	=> "teams-on-profile"
 	);
 }
 
